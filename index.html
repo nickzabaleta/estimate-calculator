@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estimate Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --page:#DFE4DE;          /* pale sage — the site's section bands */
+  --card:#FFFFFF;
+  --field:#EEF1EC;
+  --field-on:#FFFFFF;
+  --line:#D8DED7;
+  --ink:#2C352F;           /* dark forest — the site's dark band */
+  --ink2:#67706A;
+  --ink3:#98A099;
+  --sage:#C0C7BF;          /* the site's card sage */
+  --sage-pale:#E4E9E3;
+  --thread:#A63446;        /* wine — warnings only, kept off-brand on purpose */
+  --thread-bg:#FAF1F3;
+  --yard:#2C352F;
+  --r-card:16px;
+  --r-field:10px;
+  --display:"Archivo",system-ui,sans-serif;
+  --label:"IBM Plex Sans Condensed",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--page);color:var(--ink);
+  font-family:var(--label);font-size:15px;line-height:1.45;
+  padding:22px 20px 30px;
+}
+
+.wrap{max-width:940px;margin:0 auto}
+
+/* ---- masthead + tabs ---- */
+.top{margin-bottom:14px}
+/* nowrap: the tabs never drop below the title, whatever the subtitle does */
+.titlebar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:nowrap}
+.titlebar h1{min-width:0}
+h1{font-family:var(--display);font-weight:700;font-size:32px;letter-spacing:-0.035em;line-height:1.05;color:var(--ink)}
+.sub{font-size:13px;color:var(--ink2);margin-top:7px;max-width:64ch}
+
+.tabs{display:flex;gap:4px;background:#CDD5CC;padding:4px;border-radius:999px;flex:none}
+.tabs button{
+  width:44px;height:38px;padding:0;border:0;border-radius:999px;background:transparent;
+  color:var(--ink2);cursor:pointer;position:relative;
+  display:flex;align-items:center;justify-content:center;
+}
+.tabs button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tabs button:hover:not([aria-selected="true"]){color:var(--ink)}
+.tabs button[aria-selected="true"]{
+  background:var(--card);color:var(--ink);
+  box-shadow:0 2px 6px rgba(44,53,47,.2), 0 0 0 1px rgba(44,53,47,.07);
+}
+.tabs button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+body[data-unverified="true"] #tabSettings::after{
+  content:"";position:absolute;top:6px;right:7px;
+  width:8px;height:8px;border-radius:50%;
+  background:var(--thread);border:1.5px solid #CDD5CC;
+}
+body[data-unverified="true"] #tabSettings[aria-selected="true"]::after{border-color:var(--card)}
+
+/* ---- cards ---- */
+.card{background:var(--card);border-radius:var(--r-card);padding:18px 22px 20px;margin-bottom:14px;box-shadow:0 1px 2px rgba(44,53,47,.06)}
+.card h2{
+  font-family:var(--display);font-weight:700;font-size:11.5px;
+  text-transform:uppercase;letter-spacing:.13em;color:var(--ink);
+  margin-bottom:16px;
+}
+
+/* ---- fields: even grid, filled, rounded ---- */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+/* pairs hold at every width; only the very narrowest stacks */
+@media(max-width:360px){.grid{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field.wide{grid-column:1/-1}
+label,.flabel{
+  font-size:10.5px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--ink2);
+  display:flex;align-items:center;gap:6px;
+}
+input,select{
+  font-family:var(--mono);font-size:14.5px;font-variant-numeric:tabular-nums;
+  color:var(--ink);background-color:var(--field);
+  border:1.5px solid transparent;border-radius:var(--r-field);
+  padding:10px 12px;width:100%;height:42px;
+}
+/* custom chevron so the gap on the right matches the gap on the left */
+select{
+  font-family:var(--label);font-size:14px;
+  appearance:none;-webkit-appearance:none;-moz-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1.25 1.25L5.5 5.5l4.25-4.25' fill='none' stroke='%2367706A' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 12px center;
+  background-size:11px 7px;
+  padding-right:34px;
+}
+select::-ms-expand{display:none}
+input::placeholder{color:var(--ink3)}
+input:focus-visible,select:focus-visible{outline:none;background-color:var(--field-on);border-color:var(--ink)}
+.hint{font-size:11px;color:var(--ink3);line-height:1.35}
+
+.seg{display:flex;background:var(--field);border-radius:var(--r-field);padding:3px;height:42px}
+.seg button{
+  flex:1;font-family:var(--label);font-size:13px;font-weight:500;
+  border:0;border-radius:7px;background:transparent;color:var(--ink3);cursor:pointer;
+}
+.seg button:hover:not([aria-pressed="true"]):not(:disabled){color:var(--ink2)}
+.seg button[aria-pressed="true"]{
+  background:var(--card);color:var(--ink);
+  box-shadow:0 2px 5px rgba(44,53,47,.18), 0 0 0 1px rgba(44,53,47,.07);
+}
+.seg button:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+
+.money{position:relative;display:block}
+.money::before{
+  content:"$";position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  font-family:var(--mono);font-size:13px;color:var(--ink3);pointer-events:none;z-index:1;
+}
+.money input{padding-left:24px}
+
+/* the one number nobody has confirmed */
+.field.unverified label{color:var(--thread)}
+.field.unverified input{background-color:var(--thread-bg);border-color:#E5C3C9}
+.field.unverified .hint{color:var(--thread)}
+.tag{
+  font-family:var(--mono);font-size:8.5px;letter-spacing:.05em;
+  border:1px solid var(--thread);border-radius:4px;padding:1px 4px;
+  text-transform:uppercase;font-weight:400;
+}
+.tag.def{border-color:var(--line);color:var(--ink3);text-transform:none;letter-spacing:0;font-size:9px}
+
+.btn{
+  font-family:var(--label);font-size:12.5px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.07em;
+  padding:11px 22px;border:0;border-radius:999px;
+  background:var(--ink);color:#fff;cursor:pointer;
+}
+.btn.ghost{background:var(--field);color:var(--ink2)}
+.btn:hover{opacity:.87}
+.btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.preview{
+  display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;
+  margin-top:18px;padding:13px 16px;border-radius:var(--r-field);
+  background:var(--sage-pale);
+  font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink2);
+}
+.preview b{color:var(--ink);font-size:15px;font-weight:600}
+.preview .p-price{margin-left:auto}
+.preview .p-price b{color:var(--yard)}
+.preview .p-ov{color:var(--thread);font-size:11.5px;width:100%}
+.preview.err{background:var(--thread-bg);color:var(--thread);font-weight:600;font-family:var(--label)}
+.preview.empty{color:var(--ink3);font-family:var(--label);font-style:italic}
+.addbar{display:flex;gap:9px;margin-top:14px;padding-top:16px;border-top:1px solid var(--line)}
+.btn:disabled{opacity:.4;cursor:default}
+.manual{margin-top:14px;display:flex;flex-direction:column;gap:6px}
+.manual textarea{
+  font-family:var(--mono);font-size:12px;line-height:1.5;
+  background:var(--field);border:1.5px solid var(--ink);border-radius:var(--r-field);
+  padding:12px;width:100%;resize:vertical;color:var(--ink);
+}
+
+/* ---- estimate ---- */
+.tablewrap{overflow-x:auto;margin:0 -4px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{
+  font-family:var(--label);font-size:9.5px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--ink3);text-align:left;
+  padding:0 10px 9px;border-bottom:1.5px solid var(--line);white-space:nowrap;
+}
+td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th.num,td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+th.idx,td.idx{width:24px;color:var(--ink3);font-family:var(--mono);font-size:11px}
+td .spec + .spec{margin-top:1px}
+th.act,td.act{width:80px;text-align:right;white-space:nowrap}
+tbody tr[data-editing="true"] td{background:#EEF2ED}
+td .spec{color:var(--ink2);font-size:11.5px;line-height:1.35}
+td .ovtag{color:var(--thread);font-weight:600;font-size:10.5px}
+.ico{
+  width:32px;height:32px;border:0;border-radius:50%;padding:0;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;
+}
+.ico + .ico{margin-left:6px}
+.ico svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ico.light{background:var(--field);color:var(--ink)}
+.ico.light:hover:not(:disabled){background:var(--sage)}
+.ico.dark{background:var(--ink);color:#fff}
+.ico.dark:hover:not(:disabled){background:var(--thread)}
+.ico.armed{background:var(--thread);color:#fff}
+.ico.ok{background:var(--yard);color:#fff}
+.ico:disabled{opacity:.35;cursor:default}
+.ico:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.cardacts{display:flex;align-items:center}
+.confirm{
+  font-family:var(--label);font-size:11.5px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;
+  height:32px;padding:0 14px;margin-right:8px;
+  border:0;border-radius:999px;background:var(--thread);color:#fff;cursor:pointer;
+}
+.confirm:hover{opacity:.88}
+.confirm:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+.cardhead{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.cardhead h2{margin-bottom:0}
+.inctoggle{display:flex;align-items:center;gap:10px}
+.inctoggle .flabel{margin:0;white-space:nowrap}
+.inctoggle .seg{height:34px;width:104px}
+.inctoggle .seg button{font-size:12px}
+.orderrow{display:flex;justify-content:space-between;gap:14px;padding:6px 0;font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums;border-bottom:1px solid #DCE2DA}
+.orderrow:last-child{border-bottom:0}
+.orderrow b{font-weight:600;color:var(--ink)}
+.orderrow .sub{color:var(--ink3);font-size:11px}
+/* Baseline-aligned: digits have no descender, so centring the box floats them high.
+   Sitting the label on the number's baseline optically centres both. */
+.totalbar{
+  display:flex;flex-direction:column;align-items:flex-end;gap:2px;
+  background:var(--ink);color:#fff;padding:18px 24px 20px;
+  border-radius:var(--r-field);margin-top:18px;
+}
+.totalbar .cap{font-family:var(--display);font-size:17px;font-weight:600;text-transform:none;letter-spacing:-0.01em;color:#fff}
+.totalbar .num{font-family:var(--display);font-weight:700;font-size:38px;line-height:1;letter-spacing:-0.035em;font-variant-numeric:tabular-nums;color:#fff}
+
+.banner{
+  background:var(--thread-bg);border:1px solid #E5C3C9;border-radius:var(--r-field);
+  padding:12px 15px;margin-bottom:16px;font-size:12.5px;line-height:1.5;color:var(--ink);
+}
+.banner b{color:var(--thread)}
+[hidden]{display:none!important}
+/* ---------- mobile ---------- */
+@media(max-width:620px){
+  body{padding:16px 12px 48px}
+  h1{font-size:24px}
+  .sub{font-size:12.5px;margin-top:6px}
+  .top{margin-bottom:14px}
+  .titlebar{gap:12px}
+  .tabs button{width:40px;height:36px}
+  .tabs button svg{width:17px;height:17px}
+  .card{padding:16px 14px 18px;border-radius:14px}
+  .grid{gap:12px}
+
+  /* 16px stops iOS zooming the page every time a field takes focus */
+  input,select{font-size:16px;height:44px}
+  .seg{height:44px}
+  .tag.def{display:none}
+  .hint{font-size:10.5px}
+
+  .addbar{flex-wrap:wrap}
+  .addbar .btn{flex:1;min-width:132px}
+  .preview{gap:6px 14px;padding:11px 13px}
+  .preview .p-price{margin-left:auto}
+
+  /* the table stops being a table — 8 columns can't live at 360px */
+  .tablewrap{overflow:visible;margin:0}
+  table,tbody,tr,td{display:block;width:100%}
+  thead{display:none}
+  tbody tr{
+    position:relative;border:1px solid var(--line);border-radius:var(--r-field);
+    padding:13px 14px;margin-bottom:10px;
+  }
+  tbody tr[data-editing="true"]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+  tbody tr[data-editing="true"] td{background:transparent}
+  td{border:0;padding:0}
+  td.idx{display:none}
+  tbody tr > td:first-of-type{padding-right:78px;margin-bottom:9px}
+  td[data-label]{
+    display:flex;justify-content:space-between;align-items:baseline;gap:14px;
+    padding:4px 0;border-top:1px dotted var(--line);text-align:right;
+  }
+  td[data-label]::before{
+    content:attr(data-label);
+    font-family:var(--label);font-size:10px;font-weight:600;
+    text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);
+  }
+  td.price{border-top:1px solid var(--ink);margin-top:3px;padding-top:6px;font-weight:600}
+  td.price::before{color:var(--ink2)}
+  td.act{position:absolute;top:11px;right:12px;width:auto;padding:0}
+
+  .orderrow{flex-wrap:wrap;gap:2px 10px}
+  .totalbar{padding:16px 18px 18px}
+  .totalbar .num{font-size:34px}
+  .cardhead{gap:10px}
+  .inctoggle{width:100%;justify-content:space-between}
+}
+
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="top">
+    <div class="titlebar">
+      <h1>Estimate Calculator</h1>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" id="tabQuote" aria-selected="true" title="Quote" aria-label="Quote"></button>
+        <button type="button" role="tab" id="tabSettings" aria-selected="false" title="Settings" aria-label="Settings"></button>
+      </div>
+    </div>
+    <p class="sub">Generate a complete work order estimate, including yardage, widths, fabric to order, pricing, and the calculations behind every result.</p>
+  </div>
+
+  <div id="viewQuote">
+      <div class="card">
+        <h2 id="jobHead">The window</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label for="room">Room</label>
+            <input id="room" type="text" placeholder="Living room — south">
+          </div>
+          <div class="field">
+            <label for="fabricName">Fabric</label>
+            <input id="fabricName" type="text" placeholder="Kravet Bellows / Ivory">
+          </div>
+          <div class="field">
+            <label for="fabWidth">Fabric width <span class="tag def">54" default</span></label>
+            <select id="fabWidth">
+              <option value="54">54"</option>
+              <option value="118">118"</option>
+              <option value="122">122"</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="finWidth">Finished width</label>
+            <input id="finWidth" type="number" min="1" step="0.25" placeholder="—" inputmode="decimal">
+            <span class="hint">Per panel, as finished — returns, overlap and side hems in it.</span>
+          </div>
+          <div class="field">
+            <label for="finLength">Finished length</label>
+            <input id="finLength" type="number" min="1" step="0.25" placeholder="—" inputmode="decimal">
+            <span class="hint">Cut adds 16" for hems.</span>
+          </div>
+          <div class="field">
+            <label for="style">Style</label>
+            <select id="style">
+              <option value="">— Select —</option>
+              <option value="pinch">Pinch pleat</option>
+              <option value="grommet">Grommet</option>
+              <option value="rod">Rod pocket</option>
+              <option value="ripple">Ripplefold</option>
+              <option value="other">Other…</option>
+            </select>
+            <input id="styleOther" type="text" placeholder="Type the style" style="display:none;margin-top:8px">
+          </div>
+          <div class="field">
+            <label for="fullness">Fullness <span class="tag def">2.5 default</span></label>
+            <input id="fullness" type="number" value="2.5" min="1" step="0.05" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="panels">Panels</label>
+            <select id="panels">
+              <option value="2">Pair (2)</option>
+              <option value="1">Single (1)</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+          <div class="field">
+            <span class="flabel" id="oplabel">Functionality</span>
+            <div class="seg" role="group" aria-labelledby="oplabel">
+              <button type="button" id="opOper" aria-pressed="true">Operable</button>
+              <button type="button" id="opStat" aria-pressed="false">Stationary</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="lining">Lining</label>
+            <select id="lining">
+              <option value="none">Unlined</option>
+              <option value="standard">Lining</option>
+              <option value="blackout">Blackout</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="linWidth">Lining width <span class="tag def">54" default</span></label>
+            <select id="linWidth">
+              <option value="54">54"</option>
+              <option value="118">118"</option>
+              <option value="122">122"</option>
+            </select>
+          </div>
+          <div class="field wide">
+            <label for="rateOv">Rate override</label>
+            <span class="money"><input id="rateOv" type="number" min="0" step="1" placeholder="" inputmode="decimal"></span>
+            <span class="hint" id="ovHint">Leave blank for your standard rate.</span>
+          </div>
+        </div>
+        <div class="preview" id="preview"></div>
+        <div class="addbar">
+          <button type="button" class="btn" id="addBtn">Add to estimate</button>
+          <button type="button" class="btn ghost" id="cancelBtn" hidden>Cancel edit</button>
+          <button type="button" class="btn ghost" id="ovClear">Use standard rate</button>
+        </div>
+      </div>
+
+      <div class="card" id="estCard" hidden>
+        <div class="cardhead">
+          <h2>Estimate</h2>
+          <div class="cardacts">
+            <button type="button" class="confirm" id="confirmClear" hidden></button>
+            <button type="button" class="ico light" id="copyEstBtn" title="Copy estimate" aria-label="Copy estimate"></button>
+            <button type="button" class="ico dark" id="clearEstBtn" title="Clear estimate" aria-label="Clear estimate"></button>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="idx">#</th><th>Room</th>
+                <th class="num">Panel W</th><th class="num">Length</th><th class="num">Widths</th>
+                <th class="num">Yards</th>
+                <th class="num">Price</th><th class="act"></th>
+              </tr>
+            </thead>
+            <tbody id="estBody"></tbody>
+          </table>
+        </div>
+        <div class="totalbar">
+          <span class="cap">Estimate Total</span>
+          <span class="num" id="estTotal">$0.00</span>
+        </div>
+        <div class="manual" id="manual" hidden>
+          <span class="flabel">Clipboard blocked — select this and copy</span>
+          <textarea readonly rows="8"></textarea>
+        </div>
+      </div>
+
+      <div class="card" id="orderCard" hidden>
+        <div class="cardhead">
+          <h2>Fabric to order</h2>
+          <div class="inctoggle">
+            <span class="flabel" id="inclabel">Include when copying</span>
+            <div class="seg" role="group" aria-labelledby="inclabel">
+              <button type="button" id="incNo" aria-pressed="true">No</button>
+              <button type="button" id="incYes" aria-pressed="false">Yes</button>
+            </div>
+          </div>
+        </div>
+        <div id="orderList"></div>
+      </div>
+    </div>
+
+  <div id="viewSettings" hidden>
+    <div class="banner">
+      <b>One number here is still a guess.</b> The lining header-and-hem allowance is mine, not your shop's. Everything else on this tab came from you.
+    </div>
+
+    <div class="card">
+      <h2>Shop settings</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="header">Header</label>
+          <input id="header" type="number" value="8" min="0" step="0.25">
+        </div>
+        <div class="field">
+          <label for="botHem">Bottom hem</label>
+          <input id="botHem" type="number" value="8" min="0" step="0.25">
+        </div>
+        <div class="field unverified">
+          <label for="linHeader">Lining hems <span class="tag">unverified</span></label>
+          <input id="linHeader" type="number" value="10" min="0" step="0.25">
+          <span class="hint">The face takes 16". Confirm this one.</span>
+        </div>
+      </div>
+      <p class="hint" style="margin-top:14px">Finished width already includes returns, overlap and side hems. Lining finishes 2" short. Yardage always rounds up to the next yard, once per fabric.</p>
+    </div>
+
+    <div class="card">
+      <h2>Pricing</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="baseRate">Rate / width</label>
+          <span class="money"><input id="baseRate" type="number" value="150" min="0" step="1"></span>
+        </div>
+        <div class="field">
+          <label for="lenThresh">Flat to</label>
+          <input id="lenThresh" type="number" value="135" min="1" step="1">
+        </div>
+        <div class="field">
+          <label for="perInch">Add / inch over</label>
+          <span class="money"><input id="perInch" type="number" value="1" min="0" step="0.25"></span>
+        </div>
+      </div>
+      <p class="hint" id="ruleHint" style="margin:12px 0 18px">—</p>
+      <div class="grid">
+        <div class="field">
+          <label for="linYd">Lining / yd</label>
+          <span class="money"><input id="linYd" type="number" value="8" min="0" step="0.25"></span>
+        </div>
+        <div class="field">
+          <label for="blkYd">Blackout / yd</label>
+          <span class="money"><input id="blkYd" type="number" value="10" min="0" step="0.25"></span>
+        </div>
+        <div class="field">
+          <label for="fabPrice">Face fabric / yd</label>
+          <span class="money"><input id="fabPrice" type="number" min="0" step="0.01" placeholder="0"></span>
+          <span class="hint">Blank when the client supplies fabric.</span>
+        </div>
+        <div class="field">
+          <label for="minCharge">Job minimum</label>
+          <span class="money"><input id="minCharge" type="number" min="0" step="1" placeholder="0"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const DEFAULT_FULLNESS = 2.5;   // shop standard, same for every style
+const STYLE_NAME = { pinch:"Pinch pleat", grommet:"Grommet", rod:"Rod pocket", ripple:"Ripplefold" };
+// Label for a job's style: the typed text for "other", else the mapped name.
+const styleLabel = j => j.style === "other" ? (j.styleOther || "Other") : STYLE_NAME[j.style];
+const LIN_NAME = { none:"Unlined", standard:"Lining", blackout:"Blackout" };
+
+const ICON = {
+  pencil: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 19.5l.9-3.9L15.8 5.2a1.7 1.7 0 0 1 2.4 0l.6.6a1.7 1.7 0 0 1 0 2.4L8.4 18.6l-3.9.9z"/><path d="M14.6 6.4l3 3"/></svg>`,
+  x: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 7.5l9 9"/><path d="M16.5 7.5l-9 9"/></svg>`,
+  copy: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5.5 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v.5"/></svg>`,
+  check: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`,
+  trash: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16"/><path d="M9.5 6.5V5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 5v1.5"/><path d="M6.5 6.5l.9 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9l.9-12.1"/><path d="M10.5 10.5v6M13.5 10.5v6"/></svg>`,
+  clipboard: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="2.5" width="7" height="4" rx="1.4"/><path d="M15.5 4.5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-12a2 2 0 0 1 2-2h2"/><path d="M8.5 11h7M8.5 15h4.5"/></svg>`,
+  // 8 teeth, generated with trig rather than eyeballed — every tooth identical.
+  gear: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.00 4.40L12.74 1.53A10.5 10.5 0 0 1 15.32 2.04L14.91 4.98A7.6 7.6 0 0 1 17.37 6.63L19.93 5.12A10.5 10.5 0 0 1 21.39 7.31L19.02 9.09A7.6 7.6 0 0 1 19.60 12.00L22.47 12.74A10.5 10.5 0 0 1 21.96 15.32L19.02 14.91A7.6 7.6 0 0 1 17.37 17.37L18.88 19.93A10.5 10.5 0 0 1 16.69 21.39L14.91 19.02A7.6 7.6 0 0 1 12.00 19.60L11.26 22.47A10.5 10.5 0 0 1 8.68 21.96L9.09 19.02A7.6 7.6 0 0 1 6.63 17.37L4.07 18.88A10.5 10.5 0 0 1 2.61 16.69L4.98 14.91A7.6 7.6 0 0 1 4.40 12.00L1.53 11.26A10.5 10.5 0 0 1 2.04 8.68L4.98 9.09A7.6 7.6 0 0 1 6.63 6.63L5.12 4.07A10.5 10.5 0 0 1 7.31 2.61L9.09 4.98A7.6 7.6 0 0 1 12.00 4.40Z"/><circle cx="12" cy="12" r="3.3"/></svg>`
+};
+
+// Lining finishes 2" short of the face fabric. Fixed shop standard, not a per-job input.
+const LIN_SHORT = 2;
+
+let operable = true, includeOrder = false;
+let lines = [], nextId = 1, editingId = null;
+
+function seg(onBtn, offBtn, setter){
+  const flip = val => () => {
+    setter(val);
+    onBtn.setAttribute("aria-pressed", String(val));
+    offBtn.setAttribute("aria-pressed", String(!val));
+    render();
+  };
+  onBtn.addEventListener("click", flip(true));
+  offBtn.addEventListener("click", flip(false));
+}
+function setSeg(onBtn, offBtn, val, setter){
+  setter(val);
+  onBtn.setAttribute("aria-pressed", String(val));
+  offBtn.setAttribute("aria-pressed", String(!val));
+}
+seg($("opOper"), $("opStat"), v => operable = v);
+seg($("incYes"), $("incNo"), v => includeOrder = v);
+
+// Standard per-width rate: flat to a length threshold, then a per-inch adder above it.
+// Style does not change the rate — it changes fullness, which changes the width count.
+function standardRate(finLength){
+  const over = Math.max(0, finLength - n("lenThresh"));
+  return { rate: n("baseRate") + over * n("perInch"), over };
+}
+
+const n = id => parseFloat($(id).value) || 0;
+const usd = v => "$" + v.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+const inch = v => (Math.round(v*100)/100).toLocaleString(undefined,{maximumFractionDigits:2}) + '"';
+const yd = v => v.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+const wf = v => v % 1 === 0 ? String(v) : v.toFixed(1);   // 2 -> "2", 2.5 -> "2.5"
+const esc = t => String(t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* --- config persistence: shop constants survive between sessions --- */
+const CFG_KEY = "drapery-shop-config";
+const EST_KEY = "drapery-current-estimate";
+const CFG_FIELDS = ["header","botHem","linHeader",
+                    "baseRate","lenThresh","perInch","minCharge",
+                    "linYd","blkYd","fabPrice","fabWidth","linWidth"];
+let cfgReady = false;
+
+async function saveConfig(){
+  if (!cfgReady) return;
+  const cfg = { fields:{} };
+  CFG_FIELDS.forEach(f => cfg.fields[f] = $(f).value);
+  try { await window.storage.set(CFG_KEY, JSON.stringify(cfg), false); } catch {}
+}
+async function saveLines(){
+  if (!cfgReady) return;
+  try { await window.storage.set(EST_KEY, JSON.stringify({ lines, nextId }), false); } catch {}
+}
+async function loadAll(){
+  try {
+    const res = await window.storage.get(CFG_KEY, false);
+    if (res && res.value){
+      const cfg = JSON.parse(res.value);
+      if (cfg.fields) CFG_FIELDS.forEach(f => { if (cfg.fields[f] !== undefined) $(f).value = cfg.fields[f]; });
+    }
+  } catch {}
+  try {
+    const res = await window.storage.get(EST_KEY, false);
+    if (res && res.value){
+      const est = JSON.parse(res.value);
+      if (Array.isArray(est.lines))
+        lines = est.lines.map(l => l.finWidth === undefined && l.rodWidth !== undefined
+          ? { ...l, finWidth: l.rodWidth } : l);
+      if (est.nextId) nextId = est.nextId;
+    }
+  } catch {}
+  cfgReady = true;
+  render();
+}
+
+/* --- read the per-window inputs off the form --- */
+function readJob(){
+  return {
+    room: $("room").value.trim(),
+    fabricName: $("fabricName").value.trim(),
+    style: $("style").value,
+    styleOther: $("styleOther").value.trim(),
+    fullness: n("fullness"),
+    finWidth: n("finWidth"),
+    finLength: n("finLength"),
+    panels: parseInt($("panels").value, 10),
+    operable,
+    fabWidth: n("fabWidth"),
+    linType: $("lining").value,
+    linWidth: n("linWidth"),
+    rateOv: n("rateOv")
+  };
+}
+
+function writeJob(j){
+  $("room").value = j.room; $("fabricName").value = j.fabricName;
+  $("style").value = j.style; $("styleOther").value = j.styleOther || ""; syncStyleOther();
+  $("fullness").value = j.fullness ?? DEFAULT_FULLNESS;
+  $("finWidth").value = j.finWidth; $("finLength").value = j.finLength;
+  $("panels").value = j.panels; $("fabWidth").value = j.fabWidth;
+  $("lining").value = j.linType;
+  $("linWidth").value = j.linWidth; $("rateOv").value = j.rateOv || "";
+  setSeg($("opOper"), $("opStat"), j.operable, v => operable = v);
+}
+
+/* --- pure-ish: takes a window, reads shop constants, returns everything derived.
+       Yardage here is RAW (unrounded) — rounding happens once at the order. --- */
+// What this window's lining costs: its ordered yards × the per-yard rate.
+// Per-window figures sum exactly to the grouped order, so the rows foot to the total.
+function linCharge(j, c){
+  return c.lin ? Math.ceil(c.lin.raw) * n(j.linType === "blackout" ? "blkYd" : "linYd") : 0;
+}
+
+function compute(j){
+  const fullness = j.fullness ?? DEFAULT_FULLNESS;
+  const header = n("header"), botHem = n("botHem");
+
+  if (!j.style) return { error:"Choose a drapery style." };
+  if (j.style === "other" && !j.styleOther) return { error:"Type the drapery style." };
+  if (j.finWidth <= 0 || j.finLength <= 0 || j.fabWidth <= 0 || fullness <= 0)
+    return { error:"Enter a finished width, finished length and fullness greater than zero." };
+
+  // Finished width is PER PANEL and already includes returns, overlap and side hems.
+  // Each panel rounds up to the next HALF width on its own, then × the panel count.
+  const pleated = j.finWidth * fullness;
+  const exact = pleated / j.fabWidth;
+  const perPanel = Math.ceil(exact * 2) / 2;
+  const widths = perPanel * j.panels;
+
+  const cut = j.finLength + header + botHem;
+  const faceRaw = (widths * cut) / 36;
+
+  let lin = null;
+  if (j.linType !== "none" && j.linWidth > 0){
+    const linCut = j.finLength - LIN_SHORT + n("linHeader");
+    const linWidths = (Math.ceil(pleated / j.linWidth * 2) / 2) * j.panels;
+    lin = { widths:linWidths, cut:linCut, raw:(linWidths * linCut) / 36 };
+  }
+
+  const { rate: stdRate, over: lenOver } = standardRate(j.finLength);
+  const isOverride = j.rateOv > 0;
+  const rate = isOverride ? j.rateOv : stdRate;
+  const labor = widths * rate;
+  // Operable vs stationary doesn't move the price — the widths already account for it.
+  const fabrication = labor;
+
+  return { pleated, exact, widths, perPanel, cut, faceRaw, lin, fullness,
+           stdRate, rate, isOverride, lenOver, labor, fabrication };
+}
+
+/* --- group windows by the fabric they'll be ordered on --- */
+function groupOrders(rows){
+  // Each window rounds up to the next yard on its own; the order is the sum of those
+  // figures, so the line items always reconcile with the fabric order.
+  const face = new Map(), liningG = new Map();
+  rows.forEach(({ j, c }) => {
+    if (c.error) return;
+    const fname = j.fabricName || "(unnamed fabric)";
+    const fk = `${fname.toLowerCase()}|${j.fabWidth}`;
+    if (!face.has(fk)) face.set(fk, { label:fname, width:j.fabWidth, order:0, rooms:[] });
+    const g = face.get(fk); g.order += Math.ceil(c.faceRaw); g.rooms.push(j.room || "—");
+
+    if (c.lin){
+      const lk = `${j.linType}|${j.linWidth}`;
+      if (!liningG.has(lk)) liningG.set(lk, { type:j.linType, width:j.linWidth, order:0 });
+      liningG.get(lk).order += Math.ceil(c.lin.raw);
+    }
+  });
+  return { face: [...face.values()], lining: [...liningG.values()] };
+}
+
+/* --- live readout for the window in the form, then the estimate --- */
+function render(){
+  const j = readJob();
+  const c = compute(j);
+
+  const { rate: stdRate, over: lenOver } = standardRate(j.finLength);
+
+  $("ruleHint").textContent = lenOver > 0
+    ? `A ${j.finLength}" window is ${lenOver}" over — ${usd(n("baseRate"))} + ${lenOver} × ${usd(n("perInch"))} = ${usd(stdRate)}/width.`
+    : `Under ${n("lenThresh")}" — flat ${usd(n("baseRate"))}/width.`;
+
+  const on = j.rateOv > 0;
+  document.body.dataset.ov = String(on);
+  $("rateOv").placeholder = stdRate.toFixed(0);
+  $("ovClear").disabled = !on;
+  $("ovHint").textContent = on
+    ? `Overriding your standard ${usd(stdRate)} for this window only. Not saved.`
+    : `Standard rate ${usd(stdRate)}. Enter a different rate for this client.`;
+
+  const pv = $("preview");
+  const missing = [];
+  if (!$("style").value) missing.push("a style");
+  if (!$("finWidth").value) missing.push("a finished width");
+  if (!$("finLength").value) missing.push("a finished length");
+  const blank = missing.length > 0;
+  if (blank){
+    pv.className = "preview empty";
+    pv.textContent = "Enter " + (missing.length === 1 ? missing[0]
+      : missing.slice(0,-1).join(", ") + " and " + missing.at(-1)) + ".";
+  } else if (c.error){
+    pv.className = "preview err";
+    pv.textContent = c.error;
+  } else {
+    const face = Math.ceil(c.faceRaw);
+    // The unlabelled figure is this window's total: fabrication + its lining charge.
+    const linCost = linCharge(j, c);
+    pv.className = "preview";
+    pv.innerHTML =
+      `<span><b>${wf(c.widths)}</b> widths</span>` +
+      `<span><b>${face}</b> yards</span>` +
+      `<span class="p-price"><b>${usd(c.fabrication + linCost)}</b></span>` +
+      (c.isOverride ? `<span class="p-ov">rate ${usd(c.rate)} — std ${usd(c.stdRate)}</span>` : "");
+  }
+
+  $("addBtn").disabled = blank || !!c.error;
+  renderEstimate();
+}
+
+/* --- the estimate: every added window, tallied --- */
+function renderEstimate(){
+  const has = lines.length > 0;
+  $("estCard").hidden = !has;
+  $("orderCard").hidden = !has;
+  $("clearEstBtn").disabled = !has;
+  $("copyEstBtn").disabled = !has;
+  if (!has){ disarmClear(); return; }
+
+  const rows = lines.map(j => ({ j, c: compute(j) }));
+  let body = "";
+  let fabricationTotal = 0;
+
+  rows.forEach(({ j, c }, i) => {
+    if (c.error){
+      body += `<tr data-id="${j.id}"><td class="idx">${i+1}</td><td>${esc(j.room || "—")}</td>
+        <td colspan="5" style="color:var(--thread)">Invalid — reopen and fix</td>
+        <td class="act"><button type="button" class="ico dark" data-act="del" data-id="${j.id}" aria-label="Remove" title="Remove">${ICON.x}</button></td></tr>`;
+      return;
+    }
+    fabricationTotal += c.fabrication;
+    const fl = j.fullness ?? DEFAULT_FULLNESS;
+    const sub = `${styleLabel(j)} · ${j.panels} panel${j.panels>1?"s":""} · ${j.operable?"operable":"stationary"}${fl !== DEFAULT_FULLNESS ? ` · ${fl}× full` : ""}`;
+    body += `<tr data-id="${j.id}" data-editing="${editingId === j.id}">
+      <td class="idx">${i+1}</td>
+      <td>
+        <b>${esc(j.room || "—")}</b>
+        <div class="spec">${sub}</div>
+        <div class="spec">${esc(j.fabricName || "—")} · ${j.fabWidth}" · ${LIN_NAME[j.linType]}</div>
+        ${c.isOverride?`<div class="ovtag">RATE ${usd(c.rate)} — std ${usd(c.stdRate)}</div>`:""}
+      </td>
+      <td class="num" data-label="Panel W">${inch(j.finWidth)}</td>
+      <td class="num" data-label="Length">${inch(j.finLength)}</td>
+      <td class="num" data-label="Widths"><b>${wf(c.widths)}</b></td>
+      <td class="num" data-label="Yards"><b>${Math.ceil(c.faceRaw)}</b></td>
+      <td class="num price" data-label="Price">${usd(c.fabrication + linCharge(j, c))}</td>
+      <td class="act">
+        <button type="button" class="ico light" data-act="edit" data-id="${j.id}" aria-label="Edit ${esc(j.room || "window " + j.id)}" title="Edit">${ICON.pencil}</button>
+        <button type="button" class="ico dark" data-act="del" data-id="${j.id}" aria-label="Remove ${esc(j.room || "window " + j.id)}" title="Remove">${ICON.x}</button>
+      </td>
+    </tr>`;
+  });
+  $("estBody").innerHTML = body;
+
+  // Grouped by fabric so one order line covers every window using it.
+  const { face, lining } = groupOrders(rows);
+  let ol = "";
+  face.forEach(g => {
+    ol += `<div class="orderrow"><span><b>${esc(g.label)}</b> <span class="sub">${g.width}" · ${g.rooms.length} window${g.rooms.length>1?"s":""}</span></span><span><b>${g.order} yd</b></span></div>`;
+  });
+  lining.forEach(g => {
+    ol += `<div class="orderrow"><span><b>${LIN_NAME[g.type]}</b> <span class="sub">${g.width}"</span></span><span><b>${g.order} yd</b></span></div>`;
+  });
+  $("orderList").innerHTML = ol || `<div class="orderrow"><span class="sub">Nothing to order</span></div>`;
+
+  // Lining is charged on the yardage actually ordered.
+  const liningCharge = lining.reduce((a,g) => a + g.order * n(g.type === "blackout" ? "blkYd" : "linYd"), 0);
+  const fabricCharge = n("fabPrice") > 0 ? face.reduce((a,g) => a + g.order * n("fabPrice"), 0) : 0;
+  let subtotal = fabricationTotal + liningCharge;
+  const minEach = 0; // job minimum applies to the estimate, not each window
+  const minApplied = n("minCharge") > 0 && subtotal < n("minCharge");
+  if (minApplied) subtotal = n("minCharge");
+  const grand = subtotal + fabricCharge;
+
+  $("estTotal").textContent = usd(grand);
+}
+
+/* --- add / edit / remove --- */
+/* Clear what belongs to one window; leave the context that carries across a job.
+   Fabric name especially — retyping it is what breaks the order grouping. */
+// Everything about the window goes; the shop defaults come back.
+function resetWindow(){
+  ["room","fabricName","finWidth","finLength","rateOv"].forEach(f => $(f).value = "");
+  $("style").value = ""; $("styleOther").value = ""; syncStyleOther();
+  $("fullness").value = DEFAULT_FULLNESS;
+  $("panels").value = "2";
+  $("fabWidth").value = "54";
+  $("lining").value = "none";
+  $("linWidth").value = "54";
+  setSeg($("opOper"), $("opStat"), true, v => operable = v);
+  $("room").focus();
+}
+
+function exitEdit(){
+  editingId = null;
+  $("addBtn").textContent = "Add to estimate";
+  $("cancelBtn").hidden = true;
+  $("jobHead").textContent = "The window";
+}
+
+function flash(btn, msg, label){
+  btn.textContent = msg;
+  setTimeout(() => { if (btn.textContent === msg) btn.textContent = label; }, 1200);
+}
+
+$("addBtn").addEventListener("click", () => {
+  const j = readJob();
+  if (compute(j).error) return;
+  const saved = editingId !== null;
+  if (saved){
+    const i = lines.findIndex(l => l.id === editingId);
+    if (i > -1) lines[i] = { ...j, id: editingId };
+    exitEdit();
+  } else {
+    lines.push({ ...j, id: nextId++ });
+  }
+  resetWindow();
+  saveLines(); render();
+  flash($("addBtn"), saved ? "Saved" : "Added", "Add to estimate");
+});
+
+$("cancelBtn").addEventListener("click", () => { exitEdit(); resetWindow(); render(); });
+
+$("estBody").addEventListener("click", e => {
+  const btn = e.target.closest("button[data-act]");
+  if (!btn) return;
+  const id = +btn.dataset.id;
+  if (btn.dataset.act === "del"){
+    lines = lines.filter(l => l.id !== id);
+    if (editingId === id){ exitEdit(); resetWindow(); }
+  } else {
+    const j = lines.find(l => l.id === id);
+    if (!j) return;
+    writeJob(j);
+    editingId = id;
+    $("addBtn").textContent = "Save changes";
+    $("cancelBtn").hidden = false;
+    $("jobHead").textContent = "Editing — " + (j.room || "window " + id);
+    document.querySelector(".cols").scrollIntoView({ behavior:"smooth", block:"start" });
+  }
+  saveLines(); render();
+});
+
+let clearArmed = false;
+function disarmClear(){
+  clearArmed = false;
+  $("clearEstBtn").classList.remove("armed");
+  $("clearEstBtn").title = "Clear estimate";
+  $("confirmClear").hidden = true;
+}
+$("clearEstBtn").addEventListener("click", () => {
+  if (!lines.length) return;
+  if (!clearArmed){
+    clearArmed = true;
+    $("clearEstBtn").classList.add("armed");
+    $("clearEstBtn").title = "Cancel";
+    const c = $("confirmClear");
+    c.textContent = `Clear ${lines.length} window${lines.length>1?"s":""}?`;
+    c.hidden = false;
+    c.focus();
+    setTimeout(() => { if (clearArmed) disarmClear(); }, 8000);
+    return;
+  }
+  // second click on the trash cancels
+  disarmClear();
+});
+
+$("confirmClear").addEventListener("click", () => {
+  disarmClear();
+  lines = []; nextId = 1;
+  $("manual").hidden = true;
+  exitEdit(); resetWindow();
+  saveLines(); render();
+});
+
+$("ovClear").addEventListener("click", () => { $("rateOv").value = ""; render(); $("rateOv").focus(); });
+
+/* --- copy --- */
+// Left aligned throughout. Space-padded columns only line up in a monospace view —
+// pasted into an email they scatter.
+function specLine(j, c){
+  const face = Math.ceil(c.faceRaw);
+  const lin = c.lin ? `, ${Math.ceil(c.lin.raw)} yd ${LIN_NAME[j.linType].toLowerCase()}` : "";
+  return [
+    `${j.room || "Window"} — ${usd(c.fabrication + linCharge(j, c))}`,
+    `${styleLabel(j)}, ${j.panels} panel${j.panels>1?"s":""}, ${j.operable?"operable":"stationary"}`,
+    `${inch(j.finWidth)} wide per panel × ${inch(j.finLength)} long`,
+    `${wf(c.widths)} widths, ${face} yd${lin}`
+  ].join("\n");
+}
+
+$("copyEstBtn").addEventListener("click", async () => {
+  const rows = lines.map(j => ({ j, c: compute(j) })).filter(r => !r.c.error);
+  if (!rows.length) return;
+  const { face, lining } = groupOrders(rows);
+  const fabricationTotal = rows.reduce((a,{c}) => a + c.fabrication, 0);
+  const liningCharge = lining.reduce((a,g) => a + g.order * n(g.type === "blackout" ? "blkYd" : "linYd"), 0);
+  const fabricCharge = n("fabPrice") > 0 ? face.reduce((a,g) => a + g.order * n("fabPrice"), 0) : 0;
+  let subtotal = fabricationTotal + liningCharge;
+  if (n("minCharge") > 0 && subtotal < n("minCharge")) subtotal = n("minCharge");
+
+  const txt = [
+    `DRAPERY ESTIMATE — ${rows.length} window${rows.length>1?"s":""}`,
+    `${new Date().toLocaleDateString()}`,
+    ``,
+    ...rows.flatMap(({j,c}) => [specLine(j,c), ``]),
+    `TOTAL: ${usd(subtotal + fabricCharge)}`,
+
+    // The fabric order is a production document — its own block, at the very bottom,
+    // so it can be cut off before the estimate goes to a client.
+    ...(includeOrder ? [
+      ``,
+      `————————————————————————————`,
+      `FABRIC TO ORDER`,
+      ...face.map(g => `${g.label} — ${g.width}": ${g.order} yd`),
+      ...lining.map(g => `${LIN_NAME[g.type]} — ${g.width}": ${g.order} yd`),
+      ``,
+      `Fullness ${[...new Set(rows.map(({j}) => j.fullness ?? DEFAULT_FULLNESS))].join("/")} · finished width per panel, incl. returns/overlap/side hems · header ${inch(n("header"))} · hem ${inch(n("botHem"))} · lining 2" short`
+    ] : []),
+  ].filter(x => x !== null).join("\n");
+  copy(txt);
+});
+
+async function copy(txt){
+  const btn = $("copyEstBtn");
+  let ok = false;
+  // The async clipboard API is blocked in a sandboxed iframe; execCommand still works there.
+  try {
+    await navigator.clipboard.writeText(txt);
+    ok = true;
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = txt;
+      ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, txt.length);
+      ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+    } catch { ok = false; }
+  }
+  if (ok){
+    $("manual").hidden = true;
+    btn.innerHTML = ICON.check;
+    btn.classList.add("ok");
+    btn.title = "Copied";
+    setTimeout(() => {
+      btn.innerHTML = ICON.copy;
+      btn.classList.remove("ok");
+      btn.title = "Copy estimate";
+    }, 1400);
+  } else {
+    // Last resort: show the text so it can be selected by hand.
+    const m = $("manual");
+    m.hidden = false;
+    m.querySelector("textarea").value = txt;
+    m.querySelector("textarea").select();
+    btn.title = "Clipboard blocked — copy from the box below";
+  }
+}
+
+document.querySelectorAll("input,select").forEach(el => {
+  el.addEventListener("input", render);
+  el.addEventListener("change", render);
+});
+
+// Show the free-text box only when "Other…" is chosen; hide + clear otherwise.
+function syncStyleOther(){
+  const on = $("style").value === "other";
+  const box = $("styleOther");
+  box.style.display = on ? "block" : "none";
+  if (on) box.focus(); else box.value = "";
+}
+$("style").addEventListener("change", syncStyleOther);
+
+// Room and Fabric drop their placeholder the moment you click in, rather than
+// on the first keystroke. Rate override keeps its placeholder — it shows the standard rate.
+["room","fabricName"].forEach(id => {
+  const el = $(id);
+  el.addEventListener("focus", () => { el.dataset.ph = el.placeholder; el.placeholder = ""; });
+  el.addEventListener("blur",  () => { if (el.dataset.ph) el.placeholder = el.dataset.ph; });
+});
+CFG_FIELDS.forEach(f => $(f).addEventListener("input", saveConfig));
+
+$("copyEstBtn").innerHTML = ICON.copy;
+$("clearEstBtn").innerHTML = ICON.trash;
+$("tabQuote").innerHTML = ICON.clipboard;
+$("tabSettings").innerHTML = ICON.gear;
+
+render();
+loadAll();
+
+
+/* --- tabs --- */
+function showTab(which){
+  const q = which === "quote";
+  $("viewQuote").hidden = !q;
+  $("viewSettings").hidden = q;
+  $("tabQuote").setAttribute("aria-selected", String(q));
+  $("tabSettings").setAttribute("aria-selected", String(!q));
+  window.scrollTo({ top:0, behavior:"smooth" });
+}
+$("tabQuote").addEventListener("click", () => showTab("quote"));
+$("tabSettings").addEventListener("click", () => showTab("settings"));
+
+// The dot on Settings marks the one constant nobody has confirmed.
+// Flip this to false once the lining allowance is your shop's real number.
+const LINING_ALLOWANCE_UNVERIFIED = true;
+document.body.dataset.unverified = String(LINING_ALLOWANCE_UNVERIFIED);
+
+</script>
+</body>
+</html>
