@@ -313,7 +313,7 @@ td .ovtag{color:var(--thread);font-weight:600;font-size:10.5px}
             <label for="room">Room</label>
             <input id="room" type="text" placeholder="Living room — south">
           </div>
-          <div class="field">
+          <div class="field wide">
             <label for="fabricName">Fabric</label>
             <input id="fabricName" type="text" placeholder="Kravet Bellows / Ivory">
           </div>
@@ -324,6 +324,11 @@ td .ovtag{color:var(--thread);font-weight:600;font-size:10.5px}
               <option value="118">118"</option>
               <option value="122">122"</option>
             </select>
+          </div>
+          <div class="field">
+            <label for="repeat">Pattern repeat</label>
+            <input id="repeat" type="number" min="0" step="0.25" placeholder="0" inputmode="decimal">
+            <span class="hint">Vertical, in inches. Blank for plain fabric.</span>
           </div>
           <div class="field">
             <label for="finWidth">Finished width</label>
@@ -445,10 +450,6 @@ td .ovtag{color:var(--thread);font-weight:600;font-size:10.5px}
     </div>
 
   <div id="viewSettings" hidden>
-    <div class="banner">
-      <b>One number here is still a guess.</b> The lining header-and-hem allowance is mine, not your shop's. Everything else on this tab came from you.
-    </div>
-
     <div class="card">
       <h2>Shop settings</h2>
       <div class="grid">
@@ -460,13 +461,12 @@ td .ovtag{color:var(--thread);font-weight:600;font-size:10.5px}
           <label for="botHem">Bottom hem</label>
           <input id="botHem" type="number" value="8" min="0" step="0.25">
         </div>
-        <div class="field unverified">
-          <label for="linHeader">Lining hems <span class="tag">unverified</span></label>
+        <div class="field">
+          <label for="linHeader">Lining hems</label>
           <input id="linHeader" type="number" value="10" min="0" step="0.25">
-          <span class="hint">The face takes 16". Confirm this one.</span>
         </div>
       </div>
-      <p class="hint" style="margin-top:14px">Finished width already includes returns, overlap and side hems. Lining finishes 2" short. Yardage always rounds up to the next yard, once per fabric.</p>
+      <p class="hint" style="margin-top:14px">Finished width already includes returns, overlap and side hems. Lining finishes 2" short. Pattern repeat rounds each face cut up to the next full repeat; lining is cut plain. Yardage always rounds up to the next yard, once per fabric.</p>
     </div>
 
     <div class="card">
@@ -615,6 +615,7 @@ function readJob(){
     fullness: n("fullness"),
     finWidth: n("finWidth"),
     finLength: n("finLength"),
+    repeat: n("repeat"),
     panels: parseInt($("panels").value, 10),
     operable,
     fabWidth: n("fabWidth"),
@@ -629,6 +630,7 @@ function writeJob(j){
   $("style").value = j.style; $("styleOther").value = j.styleOther || ""; syncStyleOther();
   $("fullness").value = j.fullness ?? DEFAULT_FULLNESS;
   $("finWidth").value = j.finWidth; $("finLength").value = j.finLength;
+  $("repeat").value = j.repeat || "";
   $("panels").value = j.panels; $("fabWidth").value = j.fabWidth;
   $("lining").value = j.linType;
   $("linWidth").value = j.linWidth; $("rateOv").value = j.rateOv || "";
@@ -659,11 +661,16 @@ function compute(j){
   const perPanel = Math.ceil(exact * 2) / 2;
   const widths = perPanel * j.panels;
 
-  const cut = j.finLength + header + botHem;
+  // Face cut: finished length + header + bottom hem. With a vertical pattern repeat,
+  // each cut rounds UP to the next full repeat so the pattern matches across widths.
+  const rawCut = j.finLength + header + botHem;
+  const repeat = j.repeat > 0 ? j.repeat : 0;
+  const cut = repeat > 0 ? Math.ceil(rawCut / repeat) * repeat : rawCut;
   const faceRaw = (widths * cut) / 36;
 
   let lin = null;
   if (j.linType !== "none" && j.linWidth > 0){
+    // Lining is plain — no repeat. Cut to the finished length, 2" short, plus its hems.
     const linCut = j.finLength - LIN_SHORT + n("linHeader");
     const linWidths = (Math.ceil(pleated / j.linWidth * 2) / 2) * j.panels;
     lin = { widths:linWidths, cut:linCut, raw:(linWidths * linCut) / 36 };
@@ -676,7 +683,7 @@ function compute(j){
   // Operable vs stationary doesn't move the price — the widths already account for it.
   const fabrication = labor;
 
-  return { pleated, exact, widths, perPanel, cut, faceRaw, lin, fullness,
+  return { pleated, exact, widths, perPanel, cut, repeat, faceRaw, lin, fullness,
            stdRate, rate, isOverride, lenOver, labor, fabrication };
 }
 
@@ -771,7 +778,7 @@ function renderEstimate(){
     }
     fabricationTotal += c.fabrication;
     const fl = j.fullness ?? DEFAULT_FULLNESS;
-    const sub = `${styleLabel(j)} · ${j.panels} panel${j.panels>1?"s":""} · ${j.operable?"operable":"stationary"}${fl !== DEFAULT_FULLNESS ? ` · ${fl}× full` : ""}`;
+    const sub = `${styleLabel(j)} · ${j.panels} panel${j.panels>1?"s":""} · ${j.operable?"operable":"stationary"}${fl !== DEFAULT_FULLNESS ? ` · ${fl}× full` : ""}${j.repeat > 0 ? ` · ${inch(j.repeat)} repeat` : ""}`;
     body += `<tr data-id="${j.id}" data-editing="${editingId === j.id}">
       <td class="idx">${i+1}</td>
       <td>
@@ -821,7 +828,7 @@ function renderEstimate(){
    Fabric name especially — retyping it is what breaks the order grouping. */
 // Everything about the window goes; the shop defaults come back.
 function resetWindow(){
-  ["room","fabricName","finWidth","finLength","rateOv"].forEach(f => $(f).value = "");
+  ["room","fabricName","finWidth","finLength","repeat","rateOv"].forEach(f => $(f).value = "");
   $("style").value = ""; $("styleOther").value = ""; syncStyleOther();
   $("fullness").value = DEFAULT_FULLNESS;
   $("panels").value = "2";
@@ -877,7 +884,7 @@ $("estBody").addEventListener("click", e => {
     $("addBtn").textContent = "Save changes";
     $("cancelBtn").hidden = false;
     $("jobHead").textContent = "Editing — " + (j.room || "window " + id);
-    document.querySelector(".cols").scrollIntoView({ behavior:"smooth", block:"start" });
+    document.querySelector(".card").scrollIntoView({ behavior:"smooth", block:"start" });
   }
   saveLines(); render();
 });
@@ -922,10 +929,11 @@ $("ovClear").addEventListener("click", () => { $("rateOv").value = ""; render();
 function specLine(j, c){
   const face = Math.ceil(c.faceRaw);
   const lin = c.lin ? `, ${Math.ceil(c.lin.raw)} yd ${LIN_NAME[j.linType].toLowerCase()}` : "";
+  const rep = j.repeat > 0 ? `, ${inch(j.repeat)} repeat` : "";
   return [
     `${j.room || "Window"} — ${usd(c.fabrication + linCharge(j, c))}`,
     `${styleLabel(j)}, ${j.panels} panel${j.panels>1?"s":""}, ${j.operable?"operable":"stationary"}`,
-    `${inch(j.finWidth)} wide per panel × ${inch(j.finLength)} long`,
+    `${inch(j.finWidth)} wide per panel × ${inch(j.finLength)} long${rep}`,
     `${wf(c.widths)} widths, ${face} yd${lin}`
   ].join("\n");
 }
@@ -956,7 +964,7 @@ $("copyEstBtn").addEventListener("click", async () => {
       ...face.map(g => `${g.label} — ${g.width}": ${g.order} yd`),
       ...lining.map(g => `${LIN_NAME[g.type]} — ${g.width}": ${g.order} yd`),
       ``,
-      `Fullness ${[...new Set(rows.map(({j}) => j.fullness ?? DEFAULT_FULLNESS))].join("/")} · finished width per panel, incl. returns/overlap/side hems · header ${inch(n("header"))} · hem ${inch(n("botHem"))} · lining 2" short`
+      `Fullness ${[...new Set(rows.map(({j}) => j.fullness ?? DEFAULT_FULLNESS))].join("/")} · finished width per panel, incl. returns/overlap/side hems · header ${inch(n("header"))} · hem ${inch(n("botHem"))} · lining 2" short · face cuts rounded to repeat where noted`
     ] : []),
   ].filter(x => x !== null).join("\n");
   copy(txt);
@@ -1046,9 +1054,8 @@ function showTab(which){
 $("tabQuote").addEventListener("click", () => showTab("quote"));
 $("tabSettings").addEventListener("click", () => showTab("settings"));
 
-// The dot on Settings marks the one constant nobody has confirmed.
-// Flip this to false once the lining allowance is your shop's real number.
-const LINING_ALLOWANCE_UNVERIFIED = true;
+// The lining hem allowance is confirmed at 10" — no longer flagged as unverified.
+const LINING_ALLOWANCE_UNVERIFIED = false;
 document.body.dataset.unverified = String(LINING_ALLOWANCE_UNVERIFIED);
 
 </script>
