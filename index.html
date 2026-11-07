@@ -231,6 +231,17 @@ td .ovtag{color:var(--thread);font-weight:600;font-size:10.5px}
 }
 .banner b{color:var(--thread)}
 [hidden]{display:none!important}
+.savebar{
+  position:sticky;bottom:12px;z-index:5;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  background:var(--ink);color:#fff;border-radius:var(--r-field);
+  padding:12px 12px 12px 18px;box-shadow:0 6px 18px rgba(44,53,47,.28);
+}
+.savebar .msg{font-size:13.5px;font-weight:500}
+.savebar .btns{display:flex;gap:8px}
+.savebar .btn{background:#fff;color:var(--ink);padding:9px 20px}
+.savebar .btn.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4)}
+.savebar.fail{background:var(--thread)}
 /* ---------- mobile ---------- */
 @media(max-width:620px){
   body{padding:16px 12px 48px}
@@ -497,6 +508,13 @@ td .ovtag{color:var(--thread);font-weight:600;font-size:10.5px}
         </div>
       </div>
     </div>
+    <div class="savebar" id="saveBar" hidden role="status" aria-live="polite">
+      <span class="msg" id="saveMsg"></span>
+      <div class="btns" id="saveBtns">
+        <button type="button" class="btn ghost" id="discardBtn">Discard</button>
+        <button type="button" class="btn" id="saveBtn">Save settings</button>
+      </div>
+    </div>
   </div>
 </div>
 <script>
@@ -570,14 +588,34 @@ const CFG_KEY = "drapery-shop-config";
 const EST_KEY = "drapery-current-estimate";
 const CFG_FIELDS = ["header","botHem","linHeader",
                     "baseRate","lenThresh","perInch","minCharge",
-                    "linYd","blkYd","fabPrice","fabWidth","linWidth"];
+                    "linYd","blkYd","fabPrice"];   // Settings tab only; fabric/lining width are per-window inputs
 let cfgReady = false;
 
 async function saveConfig(){
-  if (!cfgReady) return;
+  if (!cfgReady) return false;
   const cfg = { fields:{} };
   CFG_FIELDS.forEach(f => cfg.fields[f] = $(f).value);
-  try { await window.storage.set(CFG_KEY, JSON.stringify(cfg), false); } catch {}
+  try { await window.storage.set(CFG_KEY, JSON.stringify(cfg), false); return true; }
+  catch { return false; }
+}
+
+/* --- save bar: appears the moment a setting differs from what is saved --- */
+let savedSnap = "", savedFlash = null;
+const cfgSnap = () => JSON.stringify(CFG_FIELDS.map(f => $(f).value));
+function showBar(mode){
+  const bar = $("saveBar");
+  bar.hidden = false;
+  bar.classList.toggle("fail", mode === "failed");
+  $("saveMsg").textContent = mode === "saved" ? "Settings saved \u2713"
+    : mode === "failed" ? "Couldn't save \u2014 this browser is blocking storage"
+    : "You have unsaved changes";
+  $("saveBtns").hidden = mode === "saved";
+}
+function updateSaveBar(){
+  const dirty = cfgReady && cfgSnap() !== savedSnap;
+  document.body.dataset.unverified = String(dirty);   // red dot on the Settings tab
+  if (dirty){ clearTimeout(savedFlash); savedFlash = null; showBar("dirty"); }
+  else if (!savedFlash) $("saveBar").hidden = true;
 }
 async function saveLines(){
   if (!cfgReady) return;
@@ -605,6 +643,7 @@ async function loadAll(){
     }
   } catch {}
   cfgReady = true;
+  savedSnap = cfgSnap();
   render();
 }
 
@@ -1031,7 +1070,26 @@ $("style").addEventListener("change", syncStyleOther);
   el.addEventListener("focus", () => { el.dataset.ph = el.placeholder; el.placeholder = ""; });
   el.addEventListener("blur",  () => { if (el.dataset.ph) el.placeholder = el.dataset.ph; });
 });
-CFG_FIELDS.forEach(f => $(f).addEventListener("input", saveConfig));
+CFG_FIELDS.forEach(f => $(f).addEventListener("input", updateSaveBar));
+
+$("saveBtn").addEventListener("click", async () => {
+  if (await saveConfig()){
+    savedSnap = cfgSnap();
+    document.body.dataset.unverified = "false";
+    showBar("saved");
+    clearTimeout(savedFlash);
+    savedFlash = setTimeout(() => { savedFlash = null; updateSaveBar(); }, 1800);
+  } else showBar("failed");
+});
+$("discardBtn").addEventListener("click", () => {
+  const vals = JSON.parse(savedSnap);
+  CFG_FIELDS.forEach((f, i) => $(f).value = vals[i]);
+  render(); updateSaveBar();
+});
+// Don't lose edits by closing the tab with unsaved settings.
+window.addEventListener("beforeunload", e => {
+  if (document.body.dataset.unverified === "true"){ e.preventDefault(); e.returnValue = ""; }
+});
 
 $("copyEstBtn").innerHTML = ICON.copy;
 $("clearEstBtn").innerHTML = ICON.trash;
@@ -1054,9 +1112,6 @@ function showTab(which){
 $("tabQuote").addEventListener("click", () => showTab("quote"));
 $("tabSettings").addEventListener("click", () => showTab("settings"));
 
-// The lining hem allowance is confirmed at 10" — no longer flagged as unverified.
-const LINING_ALLOWANCE_UNVERIFIED = false;
-document.body.dataset.unverified = String(LINING_ALLOWANCE_UNVERIFIED);
 
 </script>
 </body>
