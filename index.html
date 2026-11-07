@@ -501,6 +501,15 @@ td .ovtag{color:var(--thread);font-weight:600;font-size:10.5px}
 </div>
 <script>
 const $ = id => document.getElementById(id);
+
+// window.storage only exists inside Claude. Anywhere else (GitHub Pages) fall back to the
+// browser's localStorage so shop settings and the current estimate survive a reload.
+if (!window.storage){
+  window.storage = {
+    async get(k){ const v = localStorage.getItem(k); return v === null ? null : { key:k, value:v }; },
+    async set(k, v){ localStorage.setItem(k, v); return { key:k, value:v }; }
+  };
+}
 const DEFAULT_FULLNESS = 2.5;   // shop standard, same for every style
 const STYLE_NAME = { pinch:"Pinch pleat", grommet:"Grommet", rod:"Rod pocket", ripple:"Ripplefold" };
 // Label for a job's style: the typed text for "other", else the mapped name.
