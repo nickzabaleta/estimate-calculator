@@ -333,7 +333,7 @@ td .ovtag{color:var(--thread);font-weight:600;font-size:10.5px}
           <div class="field">
             <label for="finWidth">Finished width</label>
             <input id="finWidth" type="number" min="1" step="0.25" placeholder="—" inputmode="decimal">
-            <span class="hint">Per panel, as finished — returns, overlap and side hems in it.</span>
+            <span class="hint">Total, as finished — returns, overlap and side hems in it.</span>
           </div>
           <div class="field">
             <label for="finLength">Finished length</label>
@@ -357,22 +357,6 @@ td .ovtag{color:var(--thread);font-weight:600;font-size:10.5px}
             <input id="fullness" type="number" value="2.5" min="1" step="0.05" inputmode="decimal">
           </div>
           <div class="field">
-            <label for="panels">Panels</label>
-            <select id="panels">
-              <option value="2">Pair (2)</option>
-              <option value="1">Single (1)</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-            </select>
-          </div>
-          <div class="field">
-            <span class="flabel" id="oplabel">Functionality</span>
-            <div class="seg" role="group" aria-labelledby="oplabel">
-              <button type="button" id="opOper" aria-pressed="true">Operable</button>
-              <button type="button" id="opStat" aria-pressed="false">Stationary</button>
-            </div>
-          </div>
-          <div class="field">
             <label for="lining">Lining</label>
             <select id="lining">
               <option value="none">Unlined</option>
@@ -387,6 +371,13 @@ td .ovtag{color:var(--thread);font-weight:600;font-size:10.5px}
               <option value="118">118"</option>
               <option value="122">122"</option>
             </select>
+          </div>
+          <div class="field wide">
+            <span class="flabel" id="oplabel">Functionality</span>
+            <div class="seg" role="group" aria-labelledby="oplabel">
+              <button type="button" id="opOper" aria-pressed="true">Operable</button>
+              <button type="button" id="opStat" aria-pressed="false">Stationary</button>
+            </div>
           </div>
           <div class="field wide">
             <label for="rateOv">Rate override</label>
@@ -416,7 +407,7 @@ td .ovtag{color:var(--thread);font-weight:600;font-size:10.5px}
             <thead>
               <tr>
                 <th class="idx">#</th><th>Room</th>
-                <th class="num">Panel W</th><th class="num">Length</th><th class="num">Widths</th>
+                <th class="num">Fin. W</th><th class="num">Length</th><th class="num">Widths</th>
                 <th class="num">Yards</th>
                 <th class="num">Price</th><th class="act"></th>
               </tr>
@@ -596,8 +587,11 @@ async function loadAll(){
     if (res && res.value){
       const est = JSON.parse(res.value);
       if (Array.isArray(est.lines))
-        lines = est.lines.map(l => l.finWidth === undefined && l.rodWidth !== undefined
-          ? { ...l, finWidth: l.rodWidth } : l);
+        lines = est.lines.map(l => {
+          const { panels, rodWidth, ...rest } = l;       // panels no longer exists
+          const fw = rest.finWidth !== undefined ? rest.finWidth : rodWidth;
+          return { ...rest, finWidth: (fw || 0) * (panels || 1) };   // old width was per panel
+        });
       if (est.nextId) nextId = est.nextId;
     }
   } catch {}
@@ -616,7 +610,6 @@ function readJob(){
     finWidth: n("finWidth"),
     finLength: n("finLength"),
     repeat: n("repeat"),
-    panels: parseInt($("panels").value, 10),
     operable,
     fabWidth: n("fabWidth"),
     linType: $("lining").value,
@@ -631,7 +624,7 @@ function writeJob(j){
   $("fullness").value = j.fullness ?? DEFAULT_FULLNESS;
   $("finWidth").value = j.finWidth; $("finLength").value = j.finLength;
   $("repeat").value = j.repeat || "";
-  $("panels").value = j.panels; $("fabWidth").value = j.fabWidth;
+  $("fabWidth").value = j.fabWidth;
   $("lining").value = j.linType;
   $("linWidth").value = j.linWidth; $("rateOv").value = j.rateOv || "";
   setSeg($("opOper"), $("opStat"), j.operable, v => operable = v);
@@ -654,12 +647,11 @@ function compute(j){
   if (j.finWidth <= 0 || j.finLength <= 0 || j.fabWidth <= 0 || fullness <= 0)
     return { error:"Enter a finished width, finished length and fullness greater than zero." };
 
-  // Finished width is PER PANEL and already includes returns, overlap and side hems.
-  // Each panel rounds up to the next HALF width on its own, then × the panel count.
+  // Finished width is the TOTAL and already includes returns, overlap and side hems.
+  // The width count rounds up to the next HALF width.
   const pleated = j.finWidth * fullness;
   const exact = pleated / j.fabWidth;
-  const perPanel = Math.ceil(exact * 2) / 2;
-  const widths = perPanel * j.panels;
+  const widths = Math.ceil(exact * 2) / 2;
 
   // Face cut: finished length + header + bottom hem. With a vertical pattern repeat,
   // each cut rounds UP to the next full repeat so the pattern matches across widths.
@@ -672,7 +664,7 @@ function compute(j){
   if (j.linType !== "none" && j.linWidth > 0){
     // Lining is plain — no repeat. Cut to the finished length, 2" short, plus its hems.
     const linCut = j.finLength - LIN_SHORT + n("linHeader");
-    const linWidths = (Math.ceil(pleated / j.linWidth * 2) / 2) * j.panels;
+    const linWidths = Math.ceil(pleated / j.linWidth * 2) / 2;
     lin = { widths:linWidths, cut:linCut, raw:(linWidths * linCut) / 36 };
   }
 
@@ -683,7 +675,7 @@ function compute(j){
   // Operable vs stationary doesn't move the price — the widths already account for it.
   const fabrication = labor;
 
-  return { pleated, exact, widths, perPanel, cut, repeat, faceRaw, lin, fullness,
+  return { pleated, exact, widths, cut, repeat, faceRaw, lin, fullness,
            stdRate, rate, isOverride, lenOver, labor, fabrication };
 }
 
@@ -778,7 +770,7 @@ function renderEstimate(){
     }
     fabricationTotal += c.fabrication;
     const fl = j.fullness ?? DEFAULT_FULLNESS;
-    const sub = `${styleLabel(j)} · ${j.panels} panel${j.panels>1?"s":""} · ${j.operable?"operable":"stationary"}${fl !== DEFAULT_FULLNESS ? ` · ${fl}× full` : ""}${j.repeat > 0 ? ` · ${inch(j.repeat)} repeat` : ""}`;
+    const sub = `${styleLabel(j)} · ${j.operable?"operable":"stationary"}${fl !== DEFAULT_FULLNESS ? ` · ${fl}× full` : ""}${j.repeat > 0 ? ` · ${inch(j.repeat)} repeat` : ""}`;
     body += `<tr data-id="${j.id}" data-editing="${editingId === j.id}">
       <td class="idx">${i+1}</td>
       <td>
@@ -787,7 +779,7 @@ function renderEstimate(){
         <div class="spec">${esc(j.fabricName || "—")} · ${j.fabWidth}" · ${LIN_NAME[j.linType]}</div>
         ${c.isOverride?`<div class="ovtag">RATE ${usd(c.rate)} — std ${usd(c.stdRate)}</div>`:""}
       </td>
-      <td class="num" data-label="Panel W">${inch(j.finWidth)}</td>
+      <td class="num" data-label="Fin. W">${inch(j.finWidth)}</td>
       <td class="num" data-label="Length">${inch(j.finLength)}</td>
       <td class="num" data-label="Widths"><b>${wf(c.widths)}</b></td>
       <td class="num" data-label="Yards"><b>${Math.ceil(c.faceRaw)}</b></td>
@@ -831,7 +823,6 @@ function resetWindow(){
   ["room","fabricName","finWidth","finLength","repeat","rateOv"].forEach(f => $(f).value = "");
   $("style").value = ""; $("styleOther").value = ""; syncStyleOther();
   $("fullness").value = DEFAULT_FULLNESS;
-  $("panels").value = "2";
   $("fabWidth").value = "54";
   $("lining").value = "none";
   $("linWidth").value = "54";
@@ -932,8 +923,8 @@ function specLine(j, c){
   const rep = j.repeat > 0 ? `, ${inch(j.repeat)} repeat` : "";
   return [
     `${j.room || "Window"} — ${usd(c.fabrication + linCharge(j, c))}`,
-    `${styleLabel(j)}, ${j.panels} panel${j.panels>1?"s":""}, ${j.operable?"operable":"stationary"}`,
-    `${inch(j.finWidth)} wide per panel × ${inch(j.finLength)} long${rep}`,
+    `${styleLabel(j)}, ${j.operable?"operable":"stationary"}`,
+    `${inch(j.finWidth)} wide × ${inch(j.finLength)} long${rep}`,
     `${wf(c.widths)} widths, ${face} yd${lin}`
   ].join("\n");
 }
@@ -964,7 +955,7 @@ $("copyEstBtn").addEventListener("click", async () => {
       ...face.map(g => `${g.label} — ${g.width}": ${g.order} yd`),
       ...lining.map(g => `${LIN_NAME[g.type]} — ${g.width}": ${g.order} yd`),
       ``,
-      `Fullness ${[...new Set(rows.map(({j}) => j.fullness ?? DEFAULT_FULLNESS))].join("/")} · finished width per panel, incl. returns/overlap/side hems · header ${inch(n("header"))} · hem ${inch(n("botHem"))} · lining 2" short · face cuts rounded to repeat where noted`
+      `Fullness ${[...new Set(rows.map(({j}) => j.fullness ?? DEFAULT_FULLNESS))].join("/")} · finished width incl. returns/overlap/side hems · header ${inch(n("header"))} · hem ${inch(n("botHem"))} · lining 2" short · face cuts rounded to repeat where noted`
     ] : []),
   ].filter(x => x !== null).join("\n");
   copy(txt);
